@@ -122,14 +122,18 @@ const YesIntent = {
 
     let speechOut = 'J\'ai en tête un joueur de football. Il a joué, pas ' +
 			'forcément dans l\'ordre, dans les clubs suivant : ';
-    let cpt = 1;
-    shuffle(sessionAttributes.guessPlayer.clubs).forEach(club => {
-      if (cpt++ === sessionAttributes.guessPlayer.clubs.length) {
-        speechOut += `et ${club}. `;
-      } else {
-        speechOut += `${club}, `;
-      }
-    });
+		if (sessionAttributes.guessPlayer.clubs.length === 1) {
+			speechOut += `${sessionAttributes.guessPlayer.clubs[0]}. `;
+		} else {
+			let cpt = 1;
+			shuffle(sessionAttributes.guessPlayer.clubs).forEach(club => {
+				if (cpt++ === sessionAttributes.guessPlayer.clubs.length) {
+					speechOut += `et ${club}. `;
+				} else {
+					speechOut += `${club}, `;
+				}
+			});
+		}
     speechOut += 'Essaie de deviner le joueur !';
 
     return responseBuilder
@@ -235,6 +239,86 @@ const PlayerGuessIntent = {
   }
 };
 
+const AskClueIntent = {
+	canHandle(handlerInput) {
+		// Handle numbers only during a game
+		let isCurrentlyPlaying = false;
+		const {request} = handlerInput.requestEnvelope;
+		const {attributesManager} = handlerInput;
+		const sessionAttributes = attributesManager.getSessionAttributes();
+		console.log('attributes : ');
+		console.log(attributesManager);
+		console.log('session : ');
+		console.log(sessionAttributes);
+		
+		if (sessionAttributes.gameState &&
+			sessionAttributes.gameState === 'STARTED') {
+			isCurrentlyPlaying = true;
+		}
+		
+		return isCurrentlyPlaying && request.type === 'IntentRequest' &&
+			request.intent.name === 'AskClueIntent';
+	},
+	async handle(handlerInput) {
+		const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
+		
+		const sessionAttributes = attributesManager.getSessionAttributes();
+		const targetPlayerClue = sessionAttributes.guessPlayer.clue;
+		
+		return responseBuilder
+			.speak(`Voici l'indice, ${targetPlayerClue}`)
+			.reprompt(`Indice: ${targetPlayerClue}`)
+			.getResponse();
+	}
+};
+
+const RepeatIntent = {
+	canHandle(handlerInput) {
+		// Handle numbers only during a game
+		let isCurrentlyPlaying = false;
+		const {request} = handlerInput.requestEnvelope;
+		const {attributesManager} = handlerInput;
+		const sessionAttributes = attributesManager.getSessionAttributes();
+		console.log('attributes : ');
+		console.log(attributesManager);
+		console.log('session : ');
+		console.log(sessionAttributes);
+		
+		if (sessionAttributes.gameState &&
+			sessionAttributes.gameState === 'STARTED') {
+			isCurrentlyPlaying = true;
+		}
+		
+		return isCurrentlyPlaying && request.type === 'IntentRequest' &&
+			request.intent.name === 'RepeatIntent';
+	},
+	async handle(handlerInput) {
+		const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
+		
+		const sessionAttributes = attributesManager.getSessionAttributes();
+		
+		let speechOut = 'Pas de soucis, je vais répéter. Voici ses clubs : ';
+		if (sessionAttributes.guessPlayer.clubs.length === 1) {
+			speechOut += `${sessionAttributes.guessPlayer.clubs[0]}. `;
+		} else {
+			let cpt = 1;
+			sessionAttributes.guessPlayer.clubs.forEach(club => {
+				if (cpt++ === sessionAttributes.guessPlayer.clubs.length) {
+					speechOut += `et ${club}. `;
+				} else {
+					speechOut += `${club}, `;
+				}
+			});
+		}
+		speechOut += 'Essaie de deviner le joueur !';
+		
+		return responseBuilder
+			.speak(speechOut)
+			.reprompt('Essaie de deviner le joueur')
+			.getResponse();
+	}
+};
+
 const ErrorHandler = {
   canHandle() {
     return true;
@@ -300,42 +384,60 @@ function getPersistenceAdapter(tableName) {
 }
 
 const dataPlayers = [
-  {
-    name: 'Cristiano Ronaldo',
-    clubs: ['Sporting', 'Manchester United', 'Réal Madrid', 'Juventus'],
-    clue: 'J\'ai gagné 5 ballons d\'or',
-    nickname: ['ronaldo', 'cr7']
-  },
-  {
-  	name: 'Lionel Messi',
-    clubs: ['Barcelone'],
-    clue: 'J\'ai gagné 5 ballons d\'or',
+	{
+		name: 'Cristiano Ronaldo',
+		clubs: ['Sporting', 'Manchester United', 'Réal Madrid', 'Juventus'],
+		clue: 'J\'ai gagné 5 ballons d\'or',
+		nickname: ['ronaldo', 'cr7']
+	},
+	{
+		name: 'Lionel Messi',
+		clubs: ['Barcelone'],
+		clue: 'J\'ai gagné 5 ballons d\'or',
 		nickname: ['léo messi', 'messi', 'la pulga']
-  },
-  {
-  	name: 'Kylian Mbappé',
-    clubs: ['Monaco', 'Paris'],
-    clue: 'J\'ai gagné la coupe du monde 2018',
+	},
+	{
+		name: 'Kylian Mbappé',
+		clubs: ['Monaco', 'Paris'],
+		clue: 'J\'ai gagné la coupe du monde 2018',
 		nickname: ['mbappé']
-  },
-  {
-  	name: 'Neymar Junior',
-    clubs: ['Santos', 'Barcelone', 'Paris'],
-    clue: 'Je me blesse souvent au métatarsse',
+	},
+	{
+		name: 'Neymar Junior',
+		clubs: ['Santos', 'Barcelone', 'Paris'],
+		clue: 'Je me blesse souvent au métatarsse',
 		nickname: ['le ney', 'neymar']
-  },
-  {
-  	name: 'Eden Hazard',
-    clubs: ['Lille', 'Chelsea'],
-    clue: 'Je suis Belge.',
+	},
+	{
+		name: 'Eden Hazard',
+		clubs: ['Lille', 'Chelsea'],
+		clue: 'Je suis Belge.',
 		nickname: ['hazard']
-  },
-  {
-  	name: 'Paul Pogba',
-    clubs: ['Manchester United', 'Juventus'],
-    clue: 'Je suis champion du monde 2018.',
+	},
+	{
+		name: 'Paul Pogba',
+		clubs: ['Manchester United', 'Juventus'],
+		clue: 'Je suis champion du monde 2018.',
 		nickname: ['pogba', 'la pioche']
-  }
+	},
+	{
+		name: 'Antoine Griezmann',
+		clubs: ['Real Sociedad', 'Atletico de Madrid'],
+		clue: 'Je célébre mes buts comme sur Fortnite',
+		nickname: ['griezmann', 'grizman', 'grizi']
+	},
+	{
+		name: 'Edinson Cavani',
+		clubs: ['Dunabio', 'Palerme', 'Naples', 'Paris'],
+		clue: 'Je suis le meilleur buteur du PSG.',
+		nickname: ['cavani', 'matador']
+	},
+	{
+		name: 'Paul Pogba',
+		clubs: ['Manchester United', 'Juventus'],
+		clue: 'Je suis champion du monde 2018.',
+		nickname: ['pogba', 'la pioche']
+	},
 ];
 
 const shuffle = a => {
@@ -359,6 +461,8 @@ exports.handler = skillBuilder
     YesIntent,
     NoIntent,
     PlayerGuessIntent,
+		AskClueIntent,
+    RepeatIntent,
     FallbackHandler,
     UnhandledIntent,
   )

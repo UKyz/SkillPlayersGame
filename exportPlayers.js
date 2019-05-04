@@ -36,7 +36,25 @@ const dataPlayers = [
 		clubs: ['Manchester United', 'Juventus'],
 		clue: 'Je suis champion du monde 2018.',
 		nickname: ['pogba', 'la pioche']
-	}
+	},
+	{
+		name: 'Antoine Griezmann',
+		clubs: ['Real Sociedad', 'Atletico de Madrid'],
+		clue: 'Je célébre mes buts comme sur Fortnite',
+		nickname: ['griezmann', 'grizman', 'grizi']
+	},
+	{
+		name: 'Edinson Cavani',
+		clubs: ['Dunabio', 'Palerme', 'Naples', 'Paris'],
+		clue: 'Je suis le meilleur buteur du PSG.',
+		nickname: ['cavani', 'matador']
+	},
+	{
+		name: 'Paul Pogba',
+		clubs: ['Manchester United', 'Juventus'],
+		clue: 'Je suis champion du monde 2018.',
+		nickname: ['pogba', 'la pioche']
+	},
 ];
 
 const exportPlayers = () => {
