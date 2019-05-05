@@ -81,7 +81,8 @@ const HelpIntent = {
   },
   handle(handlerInput) {
     const speechOutput = 'Je pense à un joueur de football, je vais vous ' +
-			'donner des indices, à vous de trouver le joueur.';
+			'donner des indices, à vous de trouver le joueur. Vous pouvez me faire' +
+			' répéter ou me demander un autre indice.';
     const reprompt = 'Essaie de deviner le joueur.';
 
     return handlerInput.responseBuilder
@@ -117,11 +118,12 @@ const YesIntent = {
     const sessionAttributes = attributesManager.getSessionAttributes();
 
     sessionAttributes.gameState = 'STARTED';
-    const number = Math.floor(Math.random() * (dataPlayers.length + 1));
-    sessionAttributes.guessPlayer = dataPlayers[number];
+    const numberP = Math.floor(Math.random() * (dataPlayers.length + 1));
+    sessionAttributes.guessPlayer = dataPlayers[numberP];
+	
+		const numberS = Math.floor(Math.random() * (dataBegin.length + 1));
 
-    let speechOut = 'J\'ai en tête un joueur de football. Il a joué, pas ' +
-			'forcément dans l\'ordre, dans les clubs suivant : ';
+    let speechOut = dataBegin[numberS][0];
 		if (sessionAttributes.guessPlayer.clubs.length === 1) {
 			speechOut += `${sessionAttributes.guessPlayer.clubs[0]}. `;
 		} else {
@@ -134,7 +136,7 @@ const YesIntent = {
 				}
 			});
 		}
-    speechOut += 'Essaie de deviner le joueur !';
+    speechOut += dataBegin[numberS][1];
 
     return responseBuilder
       .speak(speechOut)
@@ -174,8 +176,8 @@ const NoIntent = {
 
     await attributesManager.savePersistentAttributes();
 
-    return;
-    responseBuilder.speak('D\'accord, à bientôt!').getResponse();
+    return responseBuilder.
+			speak('D\'accord, à bientôt!').getResponse();
   }
 };
 
@@ -219,6 +221,7 @@ const PlayerGuessIntent = {
       .resolutions.resolutionsPerAuthority[0].values[0].value.name;
     const sessionAttributes = attributesManager.getSessionAttributes();
     const targetPlayer = sessionAttributes.guessPlayer.name;
+		const number = Math.floor(Math.random() * (dataPlayerFound.length + 1));
 
     if (targetPlayer.toLowerCase() === guessPlayer.toLowerCase()) {
       sessionAttributes.gamesPlayed += 1;
@@ -226,14 +229,15 @@ const PlayerGuessIntent = {
       attributesManager.setPersistentAttributes(sessionAttributes);
       await attributesManager.savePersistentAttributes();
       return responseBuilder
-        .speak(`${guessPlayer.toString()} est le bon joueur !
-        Voulez vous rejouer ?`)
+        .speak(dataPlayerFound[number][0] + guessPlayer.toString() +
+				dataPlayerFound[number][1])
         .reprompt('Dîtes oui pour redémarrer, ou non pour quitter.')
         .getResponse();
     }
 
     return responseBuilder
-      .speak(`${guessPlayer.toString()} n'est pas le bon joueur.`)
+			.speak(dataPlayerNotFound[number][0] + guessPlayer.toString() +
+				dataPlayerNotFound[number][1])
       .reprompt('Essaies quelqu\'un d\'autre')
       .getResponse();
   }
@@ -264,9 +268,10 @@ const AskClueIntent = {
 		
 		const sessionAttributes = attributesManager.getSessionAttributes();
 		const targetPlayerClue = sessionAttributes.guessPlayer.clue;
+		const number = Math.floor(Math.random() * (dataAskClue.length + 1));
 		
 		return responseBuilder
-			.speak(`Voici l'indice, ${targetPlayerClue}`)
+			.speak(dataAskClue[number] + targetPlayerClue)
 			.reprompt(`Indice: ${targetPlayerClue}`)
 			.getResponse();
 	}
@@ -294,10 +299,10 @@ const RepeatIntent = {
 	},
 	async handle(handlerInput) {
 		const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
-		
 		const sessionAttributes = attributesManager.getSessionAttributes();
+		const number = Math.floor(Math.random() * (dataRepeat.length + 1));
 		
-		let speechOut = 'Pas de soucis, je vais répéter. Voici ses clubs : ';
+		let speechOut = dataRepeat[number][0];
 		if (sessionAttributes.guessPlayer.clubs.length === 1) {
 			speechOut += `${sessionAttributes.guessPlayer.clubs[0]}. `;
 		} else {
@@ -310,7 +315,7 @@ const RepeatIntent = {
 				}
 			});
 		}
-		speechOut += 'Essaie de deviner le joueur !';
+		speechOut += dataRepeat[number][1];
 		
 		return responseBuilder
 			.speak(speechOut)
@@ -325,10 +330,12 @@ const ErrorHandler = {
   },
   handle(handlerInput, error) {
     console.log(`Error handled: ${error.message}`);
+	
+		const number = Math.floor(Math.random() * (dataErrors.length + 1));
 
     return handlerInput.responseBuilder
-      .speak('Désolé, je n\'ai pas compris, veuillez répéter.')
-      .reprompt('Désolé, je n\'ai pas compris, veuillez répéter.')
+      .speak(dataErrors[number])
+      .reprompt(dataErrors[number])
       .getResponse();
   }
 };
@@ -382,6 +389,58 @@ function getPersistenceAdapter(tableName) {
     createTable: true
   });
 }
+
+const dataBegin = [
+	['J\'ai en tête un joueur de football. Il a joué, pas forcément dans' +
+	' l\'ordre, dans les clubs suivant : ', 'Essayez de deviner le joueur !'],
+	['Je pense à un joueur actuellement. Il est passé par ces clubs là : ',
+		'C\'est à vous de trouver le joueur.'],
+	['J\'ai en tête un joueur de football, voici les clubs dans lesquels il a' +
+	' évolué au cours de sa carrière : ', 'Essayez de deviner le joueur !'],
+	['Je pense à un joueur. Il a joué, pas forcément dans l\'ordre, dans les' +
+	' clubs suivant : ', 'À vous de joueur, essayez de trouver le joueur !']
+];
+
+const dataErrors = [
+	'Désolé, je n\'ai pas compris, veuillez répéter s\'il vous plait.',
+	'Mince, je ne comprend pas, pouvez vous répéter.',
+	'Euh, je n\'ai pas compris, pouvez vous répéter.',
+	'Désolé, je ne comprend pas, pouvez vous répéter.',
+	'Mince, je n\'ai pas compris, veuillez répéter s\'il vous plait.'
+];
+
+const dataPlayerFound = [
+	['', ' est le bon joueur ! Voulez vous rejouer ?'],
+	['Vous avez trouvé, ', ' est le bon joueur ! Encore une partie ?'],
+	['Mais vous lisez dans mes pensées ! Je pensais à ', '. Voulez vous' +
+	' rejouer ?'],
+	['Bien joué, ', ' est le bon joueur ! On refait une partie ?']
+];
+
+const dataPlayerNotFound = [
+	['', ' n\'est pas le bon joueur ! Rééssayez.'],
+	['Dommage, ', ' n\'est pas le bon joueur ! Essayez encore.'],
+	['Ce n\'est pas bon, ce n\'est pas ', '. Rééssayez.'],
+	['Mince ce n\'est pas ', '. Essayez encore !']
+];
+
+const dataAskClue = [
+	'Voici l\'indice : ',
+	'J\'ai un indice pour vous : ',
+	'Pas de souci, le voici : ',
+	'Je peux vous donner un indice, le voilà : ',
+	'J\'espère que cela vous aidera : ',
+	'Voici une petite aide pour vous : '
+];
+
+const dataRepeat = [
+	['Pas de soucis, je peux répéter, voici ses clubs : ', '. Essayez de' +
+	' deviner le joueur.'],
+	['Voici ses clubs : ', 'À vous de jouer.'],
+	['Vous avez déjà oublié ? Pas de soucis, je vais vous redire ses clubs : ',
+		'. À vous de deviner'],
+	['Je vais vous répéter, voici ses clubs : ', '. Vous l\'avez maintenant ?']
+];
 
 const dataPlayers = [
 	{
