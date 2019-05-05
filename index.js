@@ -26,8 +26,6 @@ const LaunchRequest = {
     const {responseBuilder} = handlerInput;
 
     const attributes = await attributesManager.getPersistentAttributes() || {};
-    console.log(attributes);
-    console.log(Object.keys(attributes));
     if (Object.keys(attributes).length === 0) {
       attributes.endedSessionCount = 0;
       attributes.gamesPlayed = 0;
@@ -99,10 +97,8 @@ const YesIntent = {
     const {request} = handlerInput.requestEnvelope;
     const {attributesManager} = handlerInput;
     const sessionAttributes = attributesManager.getSessionAttributes();
-    console.log('attributes : ');
-    console.log(attributesManager);
-    console.log('session : ');
-    console.log(sessionAttributes);
+
+    sessionAttributes.whereIAm = 'yesIntent0';
 
     if (sessionAttributes.gameState &&
 			sessionAttributes.gameState === 'STARTED') {
@@ -118,24 +114,30 @@ const YesIntent = {
     const sessionAttributes = attributesManager.getSessionAttributes();
 
     sessionAttributes.gameState = 'STARTED';
-    const numberP = Math.floor(Math.random() * (dataPlayers.length + 1));
+    const numberP = Math.floor(Math.random() * dataPlayers.length);
     sessionAttributes.guessPlayer = dataPlayers[numberP];
-	
-		const numberS = Math.floor(Math.random() * (dataBegin.length + 1));
+    sessionAttributes.numberRandom = numberP;
+
+    sessionAttributes.whereIAm = 'yesIntent1';
+
+    const numberS = Math.floor(Math.random() * dataBegin.length);
+
+    sessionAttributes.numberRandomS = numberS;
 
     let speechOut = dataBegin[numberS][0];
-		if (sessionAttributes.guessPlayer.clubs.length === 1) {
-			speechOut += `${sessionAttributes.guessPlayer.clubs[0]}. `;
-		} else {
-			let cpt = 1;
-			shuffle(sessionAttributes.guessPlayer.clubs).forEach(club => {
-				if (cpt++ === sessionAttributes.guessPlayer.clubs.length) {
-					speechOut += `et ${club}. `;
-				} else {
-					speechOut += `${club}, `;
-				}
-			});
-		}
+    if (sessionAttributes.guessPlayer.clubs.length === 1) {
+      speechOut += `${sessionAttributes.guessPlayer.clubs[0]}. `;
+    } else {
+      let cpt = 1;
+      shuffle(sessionAttributes.guessPlayer.clubs).forEach(club => {
+        if (cpt++ === sessionAttributes.guessPlayer.clubs.length) {
+          speechOut += `et ${club}. `;
+        } else {
+          speechOut += `${club}, `;
+        }
+      });
+    }
+
     speechOut += dataBegin[numberS][1];
 
     return responseBuilder
@@ -152,10 +154,6 @@ const NoIntent = {
     const {request} = handlerInput.requestEnvelope;
     const {attributesManager} = handlerInput;
     const sessionAttributes = attributesManager.getSessionAttributes();
-    console.log('attributes : ');
-    console.log(attributesManager);
-    console.log('session : ');
-    console.log(sessionAttributes);
 
     if (sessionAttributes.gameState &&
 			sessionAttributes.gameState === 'STARTED') {
@@ -176,8 +174,8 @@ const NoIntent = {
 
     await attributesManager.savePersistentAttributes();
 
-    return responseBuilder.
-			speak('D\'accord, à bientôt!').getResponse();
+    return responseBuilder
+      .speak('D\'accord, à bientôt!').getResponse();
   }
 };
 
@@ -201,10 +199,6 @@ const PlayerGuessIntent = {
     const {request} = handlerInput.requestEnvelope;
     const {attributesManager} = handlerInput;
     const sessionAttributes = attributesManager.getSessionAttributes();
-    console.log('attributes : ');
-    console.log(attributesManager);
-    console.log('session : ');
-    console.log(sessionAttributes);
 
     if (sessionAttributes.gameState &&
 			sessionAttributes.gameState === 'STARTED') {
@@ -221,7 +215,7 @@ const PlayerGuessIntent = {
       .resolutions.resolutionsPerAuthority[0].values[0].value.name;
     const sessionAttributes = attributesManager.getSessionAttributes();
     const targetPlayer = sessionAttributes.guessPlayer.name;
-		const number = Math.floor(Math.random() * (dataPlayerFound.length + 1));
+    const number = Math.floor(Math.random() * dataPlayerFound.length);
 
     if (targetPlayer.toLowerCase() === guessPlayer.toLowerCase()) {
       sessionAttributes.gamesPlayed += 1;
@@ -236,7 +230,7 @@ const PlayerGuessIntent = {
     }
 
     return responseBuilder
-			.speak(dataPlayerNotFound[number][0] + guessPlayer.toString() +
+      .speak(dataPlayerNotFound[number][0] + guessPlayer.toString() +
 				dataPlayerNotFound[number][1])
       .reprompt('Essaies quelqu\'un d\'autre')
       .getResponse();
@@ -244,84 +238,77 @@ const PlayerGuessIntent = {
 };
 
 const AskClueIntent = {
-	canHandle(handlerInput) {
-		// Handle numbers only during a game
-		let isCurrentlyPlaying = false;
-		const {request} = handlerInput.requestEnvelope;
-		const {attributesManager} = handlerInput;
-		const sessionAttributes = attributesManager.getSessionAttributes();
-		console.log('attributes : ');
-		console.log(attributesManager);
-		console.log('session : ');
-		console.log(sessionAttributes);
-		
-		if (sessionAttributes.gameState &&
+  canHandle(handlerInput) {
+    // Handle numbers only during a game
+    let isCurrentlyPlaying = false;
+    const {request} = handlerInput.requestEnvelope;
+    const {attributesManager} = handlerInput;
+    const sessionAttributes = attributesManager.getSessionAttributes();
+
+    if (sessionAttributes.gameState &&
 			sessionAttributes.gameState === 'STARTED') {
-			isCurrentlyPlaying = true;
-		}
-		
-		return isCurrentlyPlaying && request.type === 'IntentRequest' &&
+      isCurrentlyPlaying = true;
+    }
+
+    return isCurrentlyPlaying && request.type === 'IntentRequest' &&
 			request.intent.name === 'AskClueIntent';
-	},
-	async handle(handlerInput) {
-		const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
-		
-		const sessionAttributes = attributesManager.getSessionAttributes();
-		const targetPlayerClue = sessionAttributes.guessPlayer.clue;
-		const number = Math.floor(Math.random() * (dataAskClue.length + 1));
-		
-		return responseBuilder
-			.speak(dataAskClue[number] + targetPlayerClue)
-			.reprompt(`Indice: ${targetPlayerClue}`)
-			.getResponse();
-	}
+  },
+  async handle(handlerInput) {
+    const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
+
+    const sessionAttributes = attributesManager.getSessionAttributes();
+    const targetPlayerClue = sessionAttributes.guessPlayer.clue;
+    const number = Math.floor(Math.random() * dataAskClue.length);
+
+    return responseBuilder
+      .speak(dataAskClue[number] + targetPlayerClue)
+      .reprompt(`Indice: ${targetPlayerClue}`)
+      .getResponse();
+  }
 };
 
 const RepeatIntent = {
-	canHandle(handlerInput) {
-		// Handle numbers only during a game
-		let isCurrentlyPlaying = false;
-		const {request} = handlerInput.requestEnvelope;
-		const {attributesManager} = handlerInput;
-		const sessionAttributes = attributesManager.getSessionAttributes();
-		console.log('attributes : ');
-		console.log(attributesManager);
-		console.log('session : ');
-		console.log(sessionAttributes);
-		
-		if (sessionAttributes.gameState &&
+  canHandle(handlerInput) {
+    // Handle numbers only during a game
+    let isCurrentlyPlaying = false;
+    const {request} = handlerInput.requestEnvelope;
+    const {attributesManager} = handlerInput;
+    const sessionAttributes = attributesManager.getSessionAttributes();
+
+    if (sessionAttributes.gameState &&
 			sessionAttributes.gameState === 'STARTED') {
-			isCurrentlyPlaying = true;
-		}
-		
-		return isCurrentlyPlaying && request.type === 'IntentRequest' &&
+      isCurrentlyPlaying = true;
+    }
+
+    return isCurrentlyPlaying && request.type === 'IntentRequest' &&
 			request.intent.name === 'RepeatIntent';
-	},
-	async handle(handlerInput) {
-		const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
-		const sessionAttributes = attributesManager.getSessionAttributes();
-		const number = Math.floor(Math.random() * (dataRepeat.length + 1));
-		
-		let speechOut = dataRepeat[number][0];
-		if (sessionAttributes.guessPlayer.clubs.length === 1) {
-			speechOut += `${sessionAttributes.guessPlayer.clubs[0]}. `;
-		} else {
-			let cpt = 1;
-			sessionAttributes.guessPlayer.clubs.forEach(club => {
-				if (cpt++ === sessionAttributes.guessPlayer.clubs.length) {
-					speechOut += `et ${club}. `;
-				} else {
-					speechOut += `${club}, `;
-				}
-			});
-		}
-		speechOut += dataRepeat[number][1];
-		
-		return responseBuilder
-			.speak(speechOut)
-			.reprompt('Essaie de deviner le joueur')
-			.getResponse();
-	}
+  },
+  async handle(handlerInput) {
+    const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
+    const sessionAttributes = attributesManager.getSessionAttributes();
+    const number = Math.floor(Math.random() * dataRepeat.length);
+
+    let speechOut = dataRepeat[number][0];
+    if (sessionAttributes.guessPlayer.clubs.length === 1) {
+      speechOut += `${sessionAttributes.guessPlayer.clubs[0]}. `;
+    } else {
+      let cpt = 1;
+      sessionAttributes.guessPlayer.clubs.forEach(club => {
+        if (cpt++ === sessionAttributes.guessPlayer.clubs.length) {
+          speechOut += `et ${club}. `;
+        } else {
+          speechOut += `${club}, `;
+        }
+      });
+    }
+
+    speechOut += dataRepeat[number][1];
+
+    return responseBuilder
+      .speak(speechOut)
+      .reprompt('Essaie de deviner le joueur')
+      .getResponse();
+  }
 };
 
 const ErrorHandler = {
@@ -330,8 +317,11 @@ const ErrorHandler = {
   },
   handle(handlerInput, error) {
     console.log(`Error handled: ${error.message}`);
-	
-		const number = Math.floor(Math.random() * (dataErrors.length + 1));
+    const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
+    const sessionAttributes = attributesManager.getSessionAttributes();
+    sessionAttributes.errorMessage = `Error handled: ${error.message}`;
+
+    const number = Math.floor(Math.random() * dataErrors.length);
 
     return handlerInput.responseBuilder
       .speak(dataErrors[number])
@@ -391,112 +381,112 @@ function getPersistenceAdapter(tableName) {
 }
 
 const dataBegin = [
-	['J\'ai en tête un joueur de football. Il a joué, pas forcément dans' +
+  ['J\'ai en tête un joueur de football. Il a joué, pas forcément dans' +
 	' l\'ordre, dans les clubs suivant : ', 'Essayez de deviner le joueur !'],
-	['Je pense à un joueur actuellement. Il est passé par ces clubs là : ',
-		'C\'est à vous de trouver le joueur.'],
-	['J\'ai en tête un joueur de football, voici les clubs dans lesquels il a' +
+  ['Je pense à un joueur actuellement. Il est passé par ces clubs là : ',
+    'C\'est à vous de trouver le joueur.'],
+  ['J\'ai en tête un joueur de football, voici les clubs dans lesquels il a' +
 	' évolué au cours de sa carrière : ', 'Essayez de deviner le joueur !'],
-	['Je pense à un joueur. Il a joué, pas forcément dans l\'ordre, dans les' +
+  ['Je pense à un joueur. Il a joué, pas forcément dans l\'ordre, dans les' +
 	' clubs suivant : ', 'À vous de joueur, essayez de trouver le joueur !']
 ];
 
 const dataErrors = [
-	'Désolé, je n\'ai pas compris, veuillez répéter s\'il vous plait.',
-	'Mince, je ne comprend pas, pouvez vous répéter.',
-	'Euh, je n\'ai pas compris, pouvez vous répéter.',
-	'Désolé, je ne comprend pas, pouvez vous répéter.',
-	'Mince, je n\'ai pas compris, veuillez répéter s\'il vous plait.'
+  'Désolé, je n\'ai pas compris, veuillez répéter s\'il vous plait.',
+  'Mince, je ne comprend pas, pouvez vous répéter.',
+  'Euh, je n\'ai pas compris, pouvez vous répéter.',
+  'Désolé, je ne comprend pas, pouvez vous répéter.',
+  'Mince, je n\'ai pas compris, veuillez répéter s\'il vous plait.'
 ];
 
 const dataPlayerFound = [
-	['', ' est le bon joueur ! Voulez vous rejouer ?'],
-	['Vous avez trouvé, ', ' est le bon joueur ! Encore une partie ?'],
-	['Mais vous lisez dans mes pensées ! Je pensais à ', '. Voulez vous' +
+  ['', ' est le bon joueur ! Voulez vous rejouer ?'],
+  ['Vous avez trouvé, ', ' est le bon joueur ! Encore une partie ?'],
+  ['Mais vous lisez dans mes pensées ! Je pensais à ', '. Voulez vous' +
 	' rejouer ?'],
-	['Bien joué, ', ' est le bon joueur ! On refait une partie ?']
+  ['Bien joué, ', ' est le bon joueur ! On refait une partie ?']
 ];
 
 const dataPlayerNotFound = [
-	['', ' n\'est pas le bon joueur ! Rééssayez.'],
-	['Dommage, ', ' n\'est pas le bon joueur ! Essayez encore.'],
-	['Ce n\'est pas bon, ce n\'est pas ', '. Rééssayez.'],
-	['Mince ce n\'est pas ', '. Essayez encore !']
+  ['', ' n\'est pas le bon joueur ! Rééssayez.'],
+  ['Dommage, ', ' n\'est pas le bon joueur ! Essayez encore.'],
+  ['Ce n\'est pas bon, ce n\'est pas ', '. Rééssayez.'],
+  ['Mince ce n\'est pas ', '. Essayez encore !']
 ];
 
 const dataAskClue = [
-	'Voici l\'indice : ',
-	'J\'ai un indice pour vous : ',
-	'Pas de souci, le voici : ',
-	'Je peux vous donner un indice, le voilà : ',
-	'J\'espère que cela vous aidera : ',
-	'Voici une petite aide pour vous : '
+  'Voici l\'indice : ',
+  'J\'ai un indice pour vous : ',
+  'Pas de souci, le voici : ',
+  'Je peux vous donner un indice, le voilà : ',
+  'J\'espère que cela vous aidera : ',
+  'Voici une petite aide pour vous : '
 ];
 
 const dataRepeat = [
-	['Pas de soucis, je peux répéter, voici ses clubs : ', '. Essayez de' +
+  ['Pas de soucis, je peux répéter, voici ses clubs : ', '. Essayez de' +
 	' deviner le joueur.'],
-	['Voici ses clubs : ', 'À vous de jouer.'],
-	['Vous avez déjà oublié ? Pas de soucis, je vais vous redire ses clubs : ',
-		'. À vous de deviner'],
-	['Je vais vous répéter, voici ses clubs : ', '. Vous l\'avez maintenant ?']
+  ['Voici ses clubs : ', 'À vous de jouer.'],
+  ['Vous avez déjà oublié ? Pas de soucis, je vais vous redire ses clubs : ',
+    '. À vous de deviner'],
+  ['Je vais vous répéter, voici ses clubs : ', '. Vous l\'avez maintenant ?']
 ];
 
 const dataPlayers = [
-	{
-		name: 'Cristiano Ronaldo',
-		clubs: ['Sporting', 'Manchester United', 'Réal Madrid', 'Juventus'],
-		clue: 'J\'ai gagné 5 ballons d\'or',
-		nickname: ['ronaldo', 'cr7']
-	},
-	{
-		name: 'Lionel Messi',
-		clubs: ['Barcelone'],
-		clue: 'J\'ai gagné 5 ballons d\'or',
-		nickname: ['léo messi', 'messi', 'la pulga']
-	},
-	{
-		name: 'Kylian Mbappé',
-		clubs: ['Monaco', 'Paris'],
-		clue: 'J\'ai gagné la coupe du monde 2018',
-		nickname: ['mbappé']
-	},
-	{
-		name: 'Neymar Junior',
-		clubs: ['Santos', 'Barcelone', 'Paris'],
-		clue: 'Je me blesse souvent au métatarsse',
-		nickname: ['le ney', 'neymar']
-	},
-	{
-		name: 'Eden Hazard',
-		clubs: ['Lille', 'Chelsea'],
-		clue: 'Je suis Belge.',
-		nickname: ['hazard']
-	},
-	{
-		name: 'Paul Pogba',
-		clubs: ['Manchester United', 'Juventus'],
-		clue: 'Je suis champion du monde 2018.',
-		nickname: ['pogba', 'la pioche']
-	},
-	{
-		name: 'Antoine Griezmann',
-		clubs: ['Real Sociedad', 'Atletico de Madrid'],
-		clue: 'Je célébre mes buts comme sur Fortnite',
-		nickname: ['griezmann', 'grizman', 'grizi']
-	},
-	{
-		name: 'Edinson Cavani',
-		clubs: ['Dunabio', 'Palerme', 'Naples', 'Paris'],
-		clue: 'Je suis le meilleur buteur du PSG.',
-		nickname: ['cavani', 'matador']
-	},
-	{
-		name: 'Paul Pogba',
-		clubs: ['Manchester United', 'Juventus'],
-		clue: 'Je suis champion du monde 2018.',
-		nickname: ['pogba', 'la pioche']
-	},
+  {
+    name: 'Cristiano Ronaldo',
+    clubs: ['Sporting', 'Manchester United', 'Réal Madrid', 'Juventus'],
+    clue: 'J\'ai gagné 5 ballons d\'or',
+    nickname: ['ronaldo', 'cr7']
+  },
+  {
+    name: 'Lionel Messi',
+    clubs: ['Barcelone'],
+    clue: 'J\'ai gagné 5 ballons d\'or',
+    nickname: ['léo messi', 'messi', 'la pulga']
+  },
+  {
+    name: 'Kylian Mbappé',
+    clubs: ['Monaco', 'Paris'],
+    clue: 'J\'ai gagné la coupe du monde 2018',
+    nickname: ['mbappé']
+  },
+  {
+    name: 'Neymar Junior',
+    clubs: ['Santos', 'Barcelone', 'Paris'],
+    clue: 'Je me blesse souvent au métatarsse',
+    nickname: ['le ney', 'neymar']
+  },
+  {
+    name: 'Eden Hazard',
+    clubs: ['Lille', 'Chelsea'],
+    clue: 'Je suis Belge.',
+    nickname: ['hazard']
+  },
+  {
+    name: 'Paul Pogba',
+    clubs: ['Manchester United', 'Juventus'],
+    clue: 'Je suis champion du monde 2018.',
+    nickname: ['pogba', 'la pioche']
+  },
+  {
+    name: 'Antoine Griezmann',
+    clubs: ['Real Sociedad', 'Atletico de Madrid'],
+    clue: 'Je célébre mes buts comme sur Fortnite',
+    nickname: ['griezmann', 'grizman', 'grizi']
+  },
+  {
+    name: 'Edinson Cavani',
+    clubs: ['Dunabio', 'Palerme', 'Naples', 'Paris'],
+    clue: 'Je suis le meilleur buteur du PSG.',
+    nickname: ['cavani', 'matador']
+  },
+  {
+    name: 'Paul Pogba',
+    clubs: ['Manchester United', 'Juventus'],
+    clue: 'Je suis champion du monde 2018.',
+    nickname: ['pogba', 'la pioche']
+  }
 ];
 
 const shuffle = a => {
@@ -520,7 +510,7 @@ exports.handler = skillBuilder
     YesIntent,
     NoIntent,
     PlayerGuessIntent,
-		AskClueIntent,
+    AskClueIntent,
     RepeatIntent,
     FallbackHandler,
     UnhandledIntent,
