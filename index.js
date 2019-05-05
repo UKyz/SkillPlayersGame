@@ -311,6 +311,70 @@ const RepeatIntent = {
   }
 };
 
+const GiveUpIntent = {
+  canHandle(handlerInput) {
+    // Handle numbers only during a game
+    let isCurrentlyPlaying = false;
+    const {request} = handlerInput.requestEnvelope;
+    const {attributesManager} = handlerInput;
+    const sessionAttributes = attributesManager.getSessionAttributes();
+
+    if (sessionAttributes.gameState &&
+			sessionAttributes.gameState === 'STARTED') {
+      isCurrentlyPlaying = true;
+    }
+
+    return isCurrentlyPlaying && request.type === 'IntentRequest' &&
+			request.intent.name === 'GiveUpIntent';
+  },
+  async handle(handlerInput) {
+    const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
+
+    const sessionAttributes = attributesManager.getSessionAttributes();
+    const targetPlayer = sessionAttributes.guessPlayer.name;
+    const number = Math.floor(Math.random() * dataGiveUp.length);
+
+    sessionAttributes.gamesPlayed += 1;
+    sessionAttributes.gameState = 'ENDED';
+    attributesManager.setPersistentAttributes(sessionAttributes);
+    await attributesManager.savePersistentAttributes();
+    return responseBuilder
+      .speak(dataGiveUp[number][0] + targetPlayer.toString() +
+				dataGiveUp[number][1])
+      .reprompt('Dîtes oui pour redémarrer, ou non pour quitter.')
+      .getResponse();
+  }
+};
+
+const EasterEggIntent = {
+  canHandle(handlerInput) {
+    // Handle numbers only during a game
+    let isCurrentlyPlaying = false;
+    const {request} = handlerInput.requestEnvelope;
+    const {attributesManager} = handlerInput;
+    const sessionAttributes = attributesManager.getSessionAttributes();
+
+    if (sessionAttributes.gameState &&
+			sessionAttributes.gameState === 'STARTED') {
+      isCurrentlyPlaying = true;
+    }
+
+    return isCurrentlyPlaying && request.type === 'IntentRequest' &&
+			request.intent.name === 'EasterEggIntent';
+  },
+  async handle(handlerInput) {
+    const {requestEnvelope, attributesManager, responseBuilder} = handlerInput;
+
+    const sessionAttributes = attributesManager.getSessionAttributes();
+    const number = Math.floor(Math.random() * dataEasterEgg.length);
+
+    return responseBuilder
+      .speak(dataEasterEgg[number])
+      .reprompt('Mon secret c\'est la préparation')
+      .getResponse();
+  }
+};
+
 const ErrorHandler = {
   canHandle() {
     return true;
@@ -388,7 +452,7 @@ const dataBegin = [
   ['J\'ai en tête un joueur de football, voici les clubs dans lesquels il a' +
 	' évolué au cours de sa carrière : ', 'Essayez de deviner le joueur !'],
   ['Je pense à un joueur. Il a joué, pas forcément dans l\'ordre, dans les' +
-	' clubs suivant : ', 'À vous de joueur, essayez de trouver le joueur !']
+	' clubs suivant : ', 'À vous de jouer, essayez de trouver le joueur !']
 ];
 
 const dataErrors = [
@@ -424,12 +488,29 @@ const dataAskClue = [
 ];
 
 const dataRepeat = [
-  ['Pas de soucis, je peux répéter, voici ses clubs : ', '. Essayez de' +
+  ['Pas de soucis, je peux répéter, voici ses clubs : ', 'Essayez de' +
 	' deviner le joueur.'],
   ['Voici ses clubs : ', 'À vous de jouer.'],
   ['Vous avez déjà oublié ? Pas de soucis, je vais vous redire ses clubs : ',
-    '. À vous de deviner'],
-  ['Je vais vous répéter, voici ses clubs : ', '. Vous l\'avez maintenant ?']
+    'À vous de deviner'],
+  ['Je vais vous répéter, voici ses clubs : ', 'Vous l\'avez maintenant ?']
+];
+
+const dataEasterEgg = [
+  'Mon secret c\'est la préparation.',
+  'Gardez le pour vous, mon secret c\'est la préparation.',
+  'Ne le dîtes à personne, mon secret c\'est la préparation.',
+  'Mon secret c\'est la préparation, mais gardez le pour vous hein.',
+  'Mon secret c\'est la préparation, je ne vous ai rien dit.'
+];
+
+const dataGiveUp = [
+  ['D\'accord, je vous donne la réponse. ', ' était le bon joueur. Voulez' +
+	' vous rejouer ?'],
+  ['Vous ne trouvez pas ? ', ' était le bon joueur ! Encore une partie ?'],
+  ['Vous voulez arrêter ? Pas de soucis. Je pensais à ', '. Voulez vous' +
+	' rejouer ?'],
+  ['', ' était le bon joueur. On refait une partie ?']
 ];
 
 const dataPlayers = [
@@ -512,6 +593,8 @@ exports.handler = skillBuilder
     PlayerGuessIntent,
     AskClueIntent,
     RepeatIntent,
+    GiveUpIntent,
+    EasterEggIntent,
     FallbackHandler,
     UnhandledIntent,
   )
